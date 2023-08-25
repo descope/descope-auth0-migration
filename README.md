@@ -52,6 +52,14 @@ DESCOPE_MANAGEMENT_KEY=Your_Descope_Project_ID // Required, this is your Descope
 To get an Auth0 token, go [here](https://manage.auth0.com/#/apis/management/explorer), then copy the token to your
 `.env` file. These tokens are only valid for 24 hours by default.
 
+To get your Auth0 Tenant ID, it can be found in the URL of your Auth0 dashboard. For example, when you login to Auth0, your URL might look something like this:
+
+```
+https://manage.auth0.com/dashboard/us/dev-zx7jen5gbxsfdsr/
+```
+
+Your tenant ID is: `dev-zx7jen5gbxsfdsr`. You can also read more about it [here](https://auth0.com/docs/get-started/tenant-settings/find-your-tenant-name-or-tenant-id).
+
 To get your Descope Project ID, go [here](https://app.descope.com/settings/project), then copy the token to your
 `.env` file.
 
