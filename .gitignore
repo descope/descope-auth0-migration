@@ -1,5 +1,7 @@
 # ignore all json files
 *.json
 
+__pycache__/
+
 # ignore all .env files
 *.env*
