@@ -1,5 +1,10 @@
 from migration_utils import read_auth0_export, fetch_auth0_users, process_users
 import sys
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 
 def main(file_path):
@@ -18,7 +23,9 @@ if __name__ == "__main__":
     import sys
 
     if len(sys.argv) != 2:
-        print("Usage: python migrateAuth0ToDescope.py <path_to_auth0_export_file>")
+        logging.info(
+            "Usage: python migrateAuth0ToDescope.py <path_to_auth0_export_file>"
+        )
         sys.exit(1)
 
     file_path = sys.argv[1]

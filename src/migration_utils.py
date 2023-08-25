@@ -2,6 +2,11 @@ import json
 import os
 import requests
 from dotenv import load_dotenv
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
 """Load and read environment variables from .env file"""
 load_dotenv()
@@ -39,7 +44,9 @@ def fetch_auth0_users():
     )
 
     if response.status_code != 200:
-        print(f"Error fetching Auth0 users. Status code: {response.status_code}")
+        logging.error(
+            f"Error fetching Auth0 users. Status code: {response.status_code}"
+        )
         return []
 
     return response.json()
@@ -101,10 +108,10 @@ def create_descope_user(user, matched_user):
     response = requests.post(url, headers=headers, data=payload)
 
     if response.status_code != 200:
-        print(f"Unable to create user.  Status code: {response.status_code}")
+        logging.error(f"Unable to create user.  Status code: {response.status_code}")
     else:
-        print("User successfully created")
-        print(response.text)
+        logging.info("User successfully created")
+        logging.info(response.text)
 
 
 def process_users(exported_users, api_response_users):
@@ -125,4 +132,4 @@ def process_users(exported_users, api_response_users):
         if matched_user:
             create_descope_user(user, matched_user)
         else:
-            print(f"No match found for user_id: {user_id}")
+            logging.error(f"No match found for user_id: {user_id}")
