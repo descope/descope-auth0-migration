@@ -17,12 +17,12 @@ git clone git@github.com:descope/descope-auth0-migration.git
 
 pip
 ```
-pip install json os requests python-dotenv
+pip install requests python-dotenv
 ```
 
 pip3
 ```
-pip install json os requests python-dotenv
+pip3 install requests python-dotenv
 ```
 
 4. Setup your environment variables within the `.env` file
