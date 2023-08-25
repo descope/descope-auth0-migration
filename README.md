@@ -1,6 +1,8 @@
-# Descope Auth0 Migration Tool
+<img width="1400" alt="Descope Auth0 Migration Tool" src="https://github.com/descope/descope-auth0-migration/assets/32936811/992ee6e4-682c-4659-b333-f1d32c16258f">
 
-This repository includes a python utility for migrating your Auth0 users to Descope.
+# Descope Auth0 User Migration Tool
+
+This repository includes a Python utility for migrating your Auth0 users to Descope.
 
 ## Setup 💿
 
