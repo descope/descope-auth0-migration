@@ -755,8 +755,6 @@ def process_users_with_passwords(file_path, dry_run):
         print(
             f"Would migrate {len(users)} users from Auth0 with Passwords to Descope"
         )
-        for user in users:
-            emails.append(user['email'])
 
     else:
         print(

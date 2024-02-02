@@ -42,13 +42,9 @@ def main():
     successful_tenant_creation, failed_tenant_creation, failed_users_added_tenants, tenant_users = process_auth0_organizations(auth0_organizations, dry_run)
     if dry_run == False:
         if with_passwords:
-            print("=================== Password User Migration =================")
+            print("=================== Password User Migration ====================")
             print(f"Auth0 Users password users in file {found_password_users}")
             print(f"Successfully migrated {successful_password_users} users")
-            print(f"Successfully merged {merged_users} users")
-            # if len(disabled_users_mismatch) !=0:
-            #    print(f"Users migrated, but disabled due to one of the merged accounts being disabled {len(disabled_users_mismatch)}")
-            #    print(f"Users disabled due to one of the merged accounts being disabled {disabled_users_mismatch}")
             if len(failed_password_users) !=0:
                 print(f"Failed to migrate {len(failed_password_users)}")
                 print(f"Users which failed to migrate:")
