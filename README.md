@@ -69,6 +69,25 @@ Once you've set all of that up, you're ready to run the script.
 
 ## Running the Migration Script 🚀
 
+### Options
+
+You can run the script to capture the users from the Auth0 database via API, or you can utilize it to fetch users from an exported file.
+
+The below options show the example commands for fetching users from the Auth0 database via API; however, there is a 1000 user limitation from the Auth0 user API. So it is recommended to export a JSON of users if you have more than 1000 users. In order to export the JSON, follow [these steps](https://auth0.com/docs/customize/extensions/user-import-export-extension#export-users).
+
+Then when running the migration script, use the additional flag of `-from-json ./path_to_user_export.json`
+
+Examples:
+```
+Dry run with passwords: python3 src/main.py --from-json ./path_to_user_export.jso --with-passwords ./path_to_exported_password_users_file.json
+
+Dry run without passwords: python3 src/main.py --from-json ./path_to_user_export.jso
+
+Live run with passwords: python3 src/main.py --from-json ./path_to_user_export.jso --with-passwords ./path_to_exported_password_users_file.json
+
+Live run without passwords: python3 src/main.py --from-json ./path_to_user_export.jso
+```
+
 ### Dry run
 
 You can dry run the migration script which will allow you to see the number of users, tenants, roles, etc which will be migrated
@@ -77,7 +96,7 @@ from Auth0 to Descope.
 #### With Passwords
 
 ```
-python3 src/main.py --dry-run --with-passwords ./path_to_exported_users_file.json
+python3 src/main.py --dry-run --with-passwords ./path_to_exported_password_users_file.json
 ```
 
 The output would appear similar to the following:
@@ -119,7 +138,7 @@ Would migrate Tenant 2 with 4 associated users.
 To migrate your Auth0 users, simply run the following command:
 
 ```
-python3 src/main.py --with-passwords ./path_to_exported_users_file.json
+python3 src/main.py --with-passwords ./path_to_exported_password_users_file.json
 ```
 
 The output will include the responses of the created users, organizations, roles, and permissions as well as the mapping between the various objects within Descope:

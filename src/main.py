@@ -1,6 +1,7 @@
-from migration_utils import fetch_auth0_users, process_users, fetch_auth0_roles, process_roles, fetch_auth0_organizations, process_auth0_organizations, process_users_with_passwords
+from migration_utils import fetch_auth0_users, process_users, fetch_auth0_roles, process_roles, fetch_auth0_organizations, process_auth0_organizations, process_users_with_passwords, fetch_auth0_users_from_file
 import sys
 import argparse
+import json
 
 
 def main():
@@ -9,11 +10,14 @@ def main():
     """
     dry_run = False
     with_passwords = False
-    file_path = ""
+    passwords_file_path = ""
+    from_json = False
+    json_file_path = ""
     
     parser = argparse.ArgumentParser(description='This is a program to assist you in the migration of your users, roles, permissions, and organizations to Descope.')
     parser.add_argument('--dry-run', action='store_true', help='Enable dry run mode')
     parser.add_argument('--with-passwords', nargs=1, metavar='file-path', help='Run the script with passwords from the specified file')
+    parser.add_argument('--from-json', nargs=1, metavar='file-path', help='Run the script with users from the specified file rather than API')
     
     args = parser.parse_args()
 
@@ -21,16 +25,25 @@ def main():
         dry_run=True
 
     if args.with_passwords:
-        file_path = args.with_passwords[0]
+        passwords_file_path = args.with_passwords[0]
         with_passwords = True
-        print(f"Running with passwords from file: {file_path}")
+        print(f"Running with passwords from file: {passwords_file_path}")
 
     if with_passwords:
-        found_password_users, successful_password_users, failed_password_users = process_users_with_passwords(file_path, dry_run)
-
+        found_password_users, successful_password_users, failed_password_users = process_users_with_passwords(passwords_file_path, dry_run)
+    
+    if args.from_json:
+        json_file_path = args.from_json[0]
+        from_json=True
 
     # Fetch and Create Users
-    auth0_users = fetch_auth0_users()
+    if from_json == False:
+        auth0_users = fetch_auth0_users()
+        print(auth0_users)
+    else:
+        auth0_users = fetch_auth0_users_from_file(json_file_path)
+        
+    
     failed_users, successful_migrated_users, merged_users, disabled_users_mismatch = process_users(auth0_users, dry_run)
 
     # Fetch, create, and associate users with roles and permissions
