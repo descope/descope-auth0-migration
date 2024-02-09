@@ -138,7 +138,6 @@ def fetch_auth0_users_from_file(file_path):
                 break
             all_users.extend(users_from_api)
             page += 1
-    print(all_users)
     return all_users
 
 def fetch_auth0_users():
@@ -604,7 +603,7 @@ def add_descope_user_to_tenant(tenant, loginId):
 ### Begin Process Functions
 
 
-def process_users(api_response_users, dry_run):
+def process_users(api_response_users, dry_run, from_json):
     """
     Process the list of users from Auth0 by mapping and creating them in Descope.
 
@@ -618,9 +617,14 @@ def process_users(api_response_users, dry_run):
     if dry_run:
         print(f"Would migrate {len(api_response_users)} users from Auth0 to Descope")
     else:
-        print(
+        if from_json:
+            print(
+            f"Starting migration of {len(api_response_users)} users found via Auth0 user Export"
+            )
+        else:
+            print(
             f"Starting migration of {len(api_response_users)} users found via Auth0 API"
-        )
+            )
         for user in api_response_users:
             success, merged, disabled_mismatch, user_id_error = create_descope_user(
                 user

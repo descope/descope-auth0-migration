@@ -44,7 +44,7 @@ def main():
         auth0_users = fetch_auth0_users_from_file(json_file_path)
         
     
-    failed_users, successful_migrated_users, merged_users, disabled_users_mismatch = process_users(auth0_users, dry_run)
+    failed_users, successful_migrated_users, merged_users, disabled_users_mismatch = process_users(auth0_users, dry_run, from_json)
 
     # Fetch, create, and associate users with roles and permissions
     auth0_roles = fetch_auth0_roles()
