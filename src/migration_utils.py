@@ -106,6 +106,39 @@ def api_request_with_retry(action, url, headers, data=None, max_retries=4, timeo
 
 ### Begin Auth0 Actions
 
+def fetch_auth0_users_from_file(file_path):
+    """
+    Fetch and parse Auth0 users from the provided file.
+    
+    Returns:
+    - all_users (list): A list of parsed Auth0 users if successful, empty list otherwise.
+    """
+    file_users = []  # Renamed to avoid confusion with API users
+    all_users = []
+    with open(file_path, "r") as file:
+        for line in file:
+            file_users.append(json.loads(line))
+    
+    for user in file_users:
+        headers = {"Authorization": f"Bearer {AUTH0_TOKEN}"}
+        page = 0
+        per_page = 20
+        
+        while True:
+            response = api_request_with_retry(
+                "get",
+                f"https://{AUTH0_TENANT_ID}.us.auth0.com/api/v2/users?page={page}&per_page={per_page}&q=user_id:\"{user['user_id']}\"",
+                headers=headers,
+            )
+            if response.status_code != 200:
+                logging.error(f"Error fetching Auth0 users. Status code: {response.status_code}")
+                break  # Consider breaking instead of returning to continue with the next user
+            users_from_api = response.json()
+            if not users_from_api:
+                break
+            all_users.extend(users_from_api)
+            page += 1
+    return all_users
 
 def fetch_auth0_users():
     """
@@ -570,7 +603,7 @@ def add_descope_user_to_tenant(tenant, loginId):
 ### Begin Process Functions
 
 
-def process_users(api_response_users, dry_run):
+def process_users(api_response_users, dry_run, from_json):
     """
     Process the list of users from Auth0 by mapping and creating them in Descope.
 
@@ -584,9 +617,14 @@ def process_users(api_response_users, dry_run):
     if dry_run:
         print(f"Would migrate {len(api_response_users)} users from Auth0 to Descope")
     else:
-        print(
+        if from_json:
+            print(
+            f"Starting migration of {len(api_response_users)} users found via Auth0 user Export"
+            )
+        else:
+            print(
             f"Starting migration of {len(api_response_users)} users found via Auth0 API"
-        )
+            )
         for user in api_response_users:
             success, merged, disabled_mismatch, user_id_error = create_descope_user(
                 user
