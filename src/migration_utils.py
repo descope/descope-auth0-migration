@@ -481,9 +481,10 @@ def create_descope_user(user):
                 family_name = user_to_update["familyName"]
 
             custom_attributes = user_to_update["customAttributes"]
-            for connection in custom_attributes["connection"].split(","):
-                if connection in connections:
-                    connections.remove(connection)
+            if "connection" in user_to_update["customAttributes"]:
+                for connection in custom_attributes["connection"].split(","):
+                    if connection in connections:
+                        connections.remove(connection)
             if len(connections) == 0:
                 login_id = user_to_update["loginIds"][0]
                 status = "disabled" if user.get("blocked", False) else "enabled"
@@ -497,8 +498,10 @@ def create_descope_user(user):
                     return None, None, True, user.get("user_id")
                 return None, None, None, ""
             additional_connections = ",".join(map(str, connections))
-            if additional_connections:
+            if "connection" in user_to_update["customAttributes"] and additional_connections:
                 custom_attributes["connection"] += "," + additional_connections
+            else:
+                custom_attributes["connection"] = additional_connections
 
             try:
                 login_ids.pop(login_ids.index(user_to_update["loginIds"][0]))
