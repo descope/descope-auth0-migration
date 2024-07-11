@@ -39,7 +39,7 @@ def main():
     # Fetch and Create Users
     if from_json == False:
         auth0_users = fetch_auth0_users()
-        print(auth0_users)
+        # print(auth0_users)
     else:
         auth0_users = fetch_auth0_users_from_file(json_file_path)
         

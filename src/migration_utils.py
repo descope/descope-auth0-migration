@@ -756,7 +756,7 @@ def process_auth0_organizations(auth0_organizations, dry_run):
                     users_added += 1
                 else:
                     failed_users_added_tenants.append(
-                        f"User {loginId} failed to be added to tenant {organization['display_name']} Reason: {error}"
+                        f"User {user['email']} failed to be added to tenant {organization['display_name']} Reason: {error}"
                     )
             tenant_users.append(
                 f"Associated {users_added} users with tenant: {organization['display_name']} "
