@@ -617,6 +617,10 @@ def process_users(api_response_users, dry_run, from_json):
     successful_migrated_users = 0
     merged_users = 0
     disabled_users_mismatch = []
+    
+    inital_custom_attributes = {"connection": "String","freshlyMigrated":"Boolean"}
+    create_custom_attributes_in_descope(inital_custom_attributes)
+
     if dry_run:
         print(f"Would migrate {len(api_response_users)} users from Auth0 to Descope")
     else:
@@ -853,6 +857,64 @@ def create_users_with_passwords(user_object):
         logging.error("Unable to create user with password.")
         logging.error(f"Error:, {error.error_message}")
         return False
+    
+def create_custom_attributes_in_descope(custom_attr_dict):
+    """
+    Creates custom attributes in Descope
+
+    Args:
+    - custom_attr_dict: Dictionary of custom attribute names and assosciated data types {"name" : dataType, ...} 
+    """
+
+    type_mapping = {
+        'String': 1,
+        'Number': 2,
+        'Boolean': 3
+    }
+  
+    # Takes indivdual custom attribute and makes a json body for create attribute post request
+    custom_attr_post_body = []
+    for custom_attr_name, custom_attr_type in custom_attr_dict.items():
+        custom_attr_body = {
+            "name": custom_attr_name,
+            "type": type_mapping.get(custom_attr_type, 1), # Defualt to 0 if type not found
+            "options": [],
+            "displayName": custom_attr_name,
+            "defaultValue": {},
+            "viewPermissions": [],
+            "editPermissions": [],
+            "editable": True
+        }
+        custom_attr_post_body.append(custom_attr_body)
+
+    #Combine all custom attribute post request bodies into one
+    #Request for custom attributes to be created using a post request
+    try:
+        endpoint = "https://api.descope.com/v1/mgmt/user/customattribute/create"
+        data = {"attributes":custom_attr_post_body}
+        headers = {
+            "Authorization": f"Bearer {DESCOPE_PROJECT_ID}:{DESCOPE_MANAGEMENT_KEY}",
+            "Content-Type": "application/json"
+            }
+        response = api_request_with_retry(
+            action="post",
+            url=endpoint,
+            headers=headers,
+            data=json.dumps(data)
+            )
+        
+        if response.ok:
+            logging.info(f"Custom attributes successfully created in Descope")
+        else: 
+            response.raise_for_status()
+
+    except requests.HTTPError as e:
+        error_dict = {
+            "status_code":e.response.status_code,
+            "error_reason":e.response.reason,
+            "error_message":e.response.text
+            }
+        logging.error(f"Failed to create custom Attributes: {str(error_dict)}")
 
 # def fetch_auth0_password_user(email):
 #     """
