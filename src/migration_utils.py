@@ -642,6 +642,9 @@ def process_users(api_response_users, dry_run, from_json, verbose):
             f"Starting migration of {len(api_response_users)} users found via Auth0 API"
             )
         for user in api_response_users:
+            if verbose:
+                print(f"Starting migration of {user['name']}.")
+
             success, merged, disabled_mismatch, user_id_error = create_descope_user(
                 user
             )
@@ -656,7 +659,7 @@ def process_users(api_response_users, dry_run, from_json, verbose):
                     disabled_users_mismatch.append(user_id_error)
             else:
                 failed_users.append(user_id_error)
-            if successful_migrated_users % 10 == 0 and successful_migrated_users > 0:
+            if successful_migrated_users % 10 == 0 and successful_migrated_users > 0 and not verbose:
                 print(f"Still working, migrated {successful_migrated_users} users.")
     return (
         failed_users,
@@ -691,9 +694,10 @@ def process_roles(auth0_roles, dry_run, verbose):
         print(f"Starting migration of {len(auth0_roles)} roles found via Auth0 API")
         for role in auth0_roles:
             permissions = get_permissions_for_role(role["id"])
-            print(
-                f"Starting migration of {role['name']} with {len(permissions)} associated permissions."
-            )
+            if verbose:
+                print(
+                    f"Starting migration of {role['name']} with {len(permissions)} associated permissions."
+                )
             (
                 success,
                 success_permissions,
@@ -721,6 +725,8 @@ def process_roles(auth0_roles, dry_run, verbose):
                         f"{user['user_id']} failed to be added to {role['name']} Reason: {error}"
                     )
             roles_and_users.append(f"Mapped {users_added} user to {role['name']}")
+            if successful_migrated_roles % 10 == 0 and successful_migrated_roles > 0 and not verbose:
+                print(f"Still working, migrated {successful_migrated_roles} roles.")
 
     return (
         failed_roles,
@@ -762,6 +768,8 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
                 failed_tenant_creation.append(error)
 
             org_members = fetch_auth0_organization_members(organization["id"])
+            if verbose:
+                print(f"Starting migration of {organization["id"]} with {len(org_members)} associated users.")
             users_added = 0
             for user in org_members:
                 success, error = add_descope_user_to_tenant(
@@ -776,6 +784,8 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
             tenant_users.append(
                 f"Associated {users_added} users with tenant: {organization['display_name']} "
             )
+            if successful_tenant_creation % 10 == 0 and successful_tenant_creation > 0 and not verbose:
+                print(f"Still working, migrated {successful_tenant_creation} organizations.")
     return (
         successful_tenant_creation,
         failed_tenant_creation,
