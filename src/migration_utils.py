@@ -611,7 +611,7 @@ def add_descope_user_to_tenant(tenant, loginId):
 ### Begin Process Functions
 
 
-def process_users(api_response_users, dry_run, from_json):
+def process_users(api_response_users, dry_run, from_json, verbose):
     """
     Process the list of users from Auth0 by mapping and creating them in Descope.
 
@@ -628,6 +628,10 @@ def process_users(api_response_users, dry_run, from_json):
 
     if dry_run:
         print(f"Would migrate {len(api_response_users)} users from Auth0 to Descope")
+        if verbose:
+            for user in api_response_users:
+                print(f"\tuser: {user['name']}")
+
     else:
         if from_json:
             print(
@@ -662,7 +666,7 @@ def process_users(api_response_users, dry_run, from_json):
     )
 
 
-def process_roles(auth0_roles, dry_run):
+def process_roles(auth0_roles, dry_run, verbose):
     """
     Process the Auth0 organizations - creating roles, permissions, and associating users
 
@@ -677,11 +681,12 @@ def process_roles(auth0_roles, dry_run):
     failed_roles_and_users = []
     if dry_run:
         print(f"Would migrate {len(auth0_roles)} roles from Auth0 to Descope")
-        for role in auth0_roles:
-            permissions = get_permissions_for_role(role["id"])
-            print(
-                f"Would migrate {role['name']} with {len(permissions)} associated permissions."
-            )
+        if verbose:
+            for role in auth0_roles:
+                permissions = get_permissions_for_role(role["id"])
+                print(
+                    f"\trole: {role['name']} with {len(permissions)} associated permissions."
+                )
     else:
         print(f"Starting migration of {len(auth0_roles)} roles found via Auth0 API")
         for role in auth0_roles:
@@ -727,7 +732,7 @@ def process_roles(auth0_roles, dry_run):
     )
 
 
-def process_auth0_organizations(auth0_organizations, dry_run):
+def process_auth0_organizations(auth0_organizations, dry_run, verbose):
     """
     Process the Auth0 organizations - creating tenants and associating users
 
@@ -742,11 +747,12 @@ def process_auth0_organizations(auth0_organizations, dry_run):
         print(
             f"Would migrate {len(auth0_organizations)} organizations from Auth0 to Descope"
         )
-        for organization in auth0_organizations:
-            org_members = fetch_auth0_organization_members(organization["id"])
-            print(
-                f"Would migrate {organization['display_name']} with {len(org_members)} associated users."
-            )
+        if verbose:
+            for organization in auth0_organizations:
+                org_members = fetch_auth0_organization_members(organization["id"])
+                print(
+                    f"\torganization: {organization['display_name']} with {len(org_members)} associated users."
+                )
     else:
         for organization in auth0_organizations:
             success, error = create_descope_tenant(organization)
@@ -796,7 +802,7 @@ def read_auth0_export(file_path):
         data = [json.loads(line) for line in file]
     return data
 
-def process_users_with_passwords(file_path, dry_run):
+def process_users_with_passwords(file_path, dry_run, verbose):
     users = read_auth0_export(file_path)
     successful_password_users = 0
     failed_password_users = []
@@ -805,6 +811,9 @@ def process_users_with_passwords(file_path, dry_run):
         print(
             f"Would migrate {len(users)} users from Auth0 with Passwords to Descope"
         )
+        if verbose:
+            for user in users:
+                print(f"\tuser: {user['name']}")
 
     else:
         print(

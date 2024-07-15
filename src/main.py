@@ -9,13 +9,16 @@ def main():
     Main function to process Auth0 users, roles, permissions, and organizations, creating and mapping them together within your Descope project.
     """
     dry_run = False
+    verbose = False
     with_passwords = False
     passwords_file_path = ""
     from_json = False
     json_file_path = ""
     
+    
     parser = argparse.ArgumentParser(description='This is a program to assist you in the migration of your users, roles, permissions, and organizations to Descope.')
     parser.add_argument('--dry-run', action='store_true', help='Enable dry run mode')
+    parser.add_argument('--verbose','-v', action='store_true',help='Enable verbose dry_run')
     parser.add_argument('--with-passwords', nargs=1, metavar='file-path', help='Run the script with passwords from the specified file')
     parser.add_argument('--from-json', nargs=1, metavar='file-path', help='Run the script with users from the specified file rather than API')
     
@@ -23,6 +26,9 @@ def main():
 
     if args.dry_run:
         dry_run=True
+    
+    if args.verbose:
+        verbose = True
 
     if args.with_passwords:
         passwords_file_path = args.with_passwords[0]
@@ -30,7 +36,7 @@ def main():
         print(f"Running with passwords from file: {passwords_file_path}")
 
     if with_passwords:
-        found_password_users, successful_password_users, failed_password_users = process_users_with_passwords(passwords_file_path, dry_run)
+        found_password_users, successful_password_users, failed_password_users = process_users_with_passwords(passwords_file_path, dry_run, verbose)
     
     if args.from_json:
         json_file_path = args.from_json[0]
@@ -44,15 +50,15 @@ def main():
         auth0_users = fetch_auth0_users_from_file(json_file_path)
         
     
-    failed_users, successful_migrated_users, merged_users, disabled_users_mismatch = process_users(auth0_users, dry_run, from_json)
+    failed_users, successful_migrated_users, merged_users, disabled_users_mismatch = process_users(auth0_users, dry_run, from_json, verbose)
 
     # Fetch, create, and associate users with roles and permissions
     auth0_roles = fetch_auth0_roles()
-    failed_roles, successful_migrated_roles, failed_permissions, successful_migrated_permissions, roles_and_users, failed_roles_and_users = process_roles(auth0_roles, dry_run)
+    failed_roles, successful_migrated_roles, failed_permissions, successful_migrated_permissions, roles_and_users, failed_roles_and_users = process_roles(auth0_roles, dry_run, verbose)
 
     # Fetch, create, and associate users with Organizations
     auth0_organizations = fetch_auth0_organizations()
-    successful_tenant_creation, failed_tenant_creation, failed_users_added_tenants, tenant_users = process_auth0_organizations(auth0_organizations, dry_run)
+    successful_tenant_creation, failed_tenant_creation, failed_users_added_tenants, tenant_users = process_auth0_organizations(auth0_organizations, dry_run, verbose)
     if dry_run == False:
         if with_passwords:
             print("=================== Password User Migration ====================")
