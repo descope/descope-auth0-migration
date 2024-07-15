@@ -430,7 +430,12 @@ def create_descope_user(user):
                 "freshlyMigrated": True,
             }
             additional_login_ids = login_ids[1 : len(login_ids)]
-
+            
+             # Auth0 does not put phone number in phone var instead in display name 
+            #  so if sms only user put phone as login id so they can be created
+            if not email and display_name:
+                login_id = display_name
+                
             # Create the user
             resp = descope_client.mgmt.user.create(
                 login_id=login_id,
