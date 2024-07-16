@@ -760,6 +760,7 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
                     f"\torganization: {organization['display_name']} with {len(org_members)} associated users."
                 )
     else:
+        print(f"Starting migration of {len(auth0_organizations)} organizations found via Auth0 API")
         for organization in auth0_organizations:
             success, error = create_descope_tenant(organization)
             if success:
@@ -769,7 +770,7 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
 
             org_members = fetch_auth0_organization_members(organization["id"])
             if verbose:
-                print(f"Starting migration of {organization["id"]} with {len(org_members)} associated users.")
+                print(f"Starting migration of {organization['id']} with {len(org_members)} associated users.")
             users_added = 0
             for user in org_members:
                 success, error = add_descope_user_to_tenant(
