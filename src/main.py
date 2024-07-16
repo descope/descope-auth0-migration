@@ -54,7 +54,7 @@ def main():
 
     # Fetch, create, and associate users with roles and permissions
     auth0_roles = fetch_auth0_roles()
-    failed_roles, successful_migrated_roles, failed_permissions, successful_migrated_permissions, roles_and_users, failed_roles_and_users = process_roles(auth0_roles, dry_run, verbose)
+    failed_roles, successful_migrated_roles, roles_exist_descope, failed_permissions, successful_migrated_permissions, roles_and_users, failed_roles_and_users = process_roles(auth0_roles, dry_run, verbose)
 
     # Fetch, create, and associate users with Organizations
     auth0_organizations = fetch_auth0_organizations()
@@ -90,13 +90,13 @@ def main():
 
         print("=================== Role Migration =============================")
         print(f"Auth0 Roles found via API {len(auth0_roles)}")
-        print(f"Successfully migrated {successful_migrated_roles} roles")
+        print(f"Existing roles found in Descope {roles_exist_descope}")
+        print(f"Created roles within Descope {successful_migrated_roles}")
         if len(failed_roles) !=0:
             print(f"Failed to migrate {len(failed_roles)}")
             print(f"Roles which failed to migrate:")
             for failed_role in failed_roles:
                 print(failed_role)
-        print(f"Created roles within Descope {successful_migrated_roles}")
 
         print("=================== Permission Migration =======================")
         print(f"Auth0 Permissions found via API {len(failed_permissions)+successful_migrated_permissions}")
@@ -120,7 +120,7 @@ def main():
         print("=================== Tenant Migration ===========================")
         print(f"Auth0 Tenants found via API {len(auth0_organizations)}")
         print(f"Existing tenants found in Descope {tenant_exists_descope}")
-        print(f"Successfully created {successful_tenant_creation} tenants")
+        print(f"Created tenants within Descope {successful_tenant_creation}")
         if len(failed_tenant_creation) !=0:
             print(f"Failed to migrate {len(failed_tenant_creation)}")
             print(f"Tenants which failed to migrate:")

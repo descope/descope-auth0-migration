@@ -357,25 +357,30 @@ def create_descope_role_and_permissions(role, permissions):
             logging.error(f"Status Code: {error.status_code}")
             logging.error(f"Error: {error.error_message}")
 
+
     role_name = role["name"]
-    role_description = role.get("description", "")
-    try:
-        descope_client.mgmt.role.create(
-            name=role_name,
-            description=role_description,
-            permission_names=permissionNames,
-        )
-        return True, success_permissions, failed_permissions, ""
-    except AuthException as error:
-        logging.error(f"Unable to create role: {role_name}.")
-        logging.error(f"Status Code: {error.status_code}")
-        logging.error(f"Error: {error.error_message}")
-        return (
-            False,
-            success_permissions,
-            failed_permissions,
-            f"{role_name}  Reason: {error.error_message}",
-        )
+    if not check_role_exists_descope(role_name):
+        role_description = role.get("description", "")
+        try:
+            descope_client.mgmt.role.create(
+                name=role_name,
+                description=role_description,
+                permission_names=permissionNames,
+            )
+            return True, False, success_permissions, failed_permissions, ""
+        except AuthException as error:
+            logging.error(f"Unable to create role: {role_name}.")
+            logging.error(f"Status Code: {error.status_code}")
+            logging.error(f"Error: {error.error_message}")
+            return (
+                False,
+                False,
+                success_permissions,
+                failed_permissions,
+                f"{role_name}  Reason: {error.error_message}",
+            )
+    else:
+        return False, True, success_permissions, failed_permissions, ""
 
 
 def create_descope_user(user):
@@ -608,6 +613,17 @@ def check_tenant_exists_descope(tenant_id):
     except:
         return False
 
+def check_role_exists_descope(role_name):
+
+    try:
+        roles_resp = descope_client.mgmt.role.search(role_names=[role_name])
+        if roles_resp["roles"]:
+            return True
+        else:
+            return False
+    except:
+        return False
+
 
 ### End Descope Actions:
 
@@ -681,6 +697,7 @@ def process_roles(auth0_roles, dry_run, verbose):
     """
     failed_roles = []
     successful_migrated_roles = 0
+    roles_exist_descope = 0
     total_failed_permissions = []
     successful_migrated_permissions = 0
     roles_and_users = []
@@ -703,12 +720,16 @@ def process_roles(auth0_roles, dry_run, verbose):
                 )
             (
                 success,
+                role_exists,
                 success_permissions,
                 failed_permissions,
                 error,
             ) = create_descope_role_and_permissions(role, permissions)
             if success:
                 successful_migrated_roles += 1
+                successful_migrated_permissions += success_permissions
+            elif role_exists:
+                roles_exist_descope += 1
                 successful_migrated_permissions += success_permissions
             else:
                 failed_roles.append(error)
@@ -734,6 +755,7 @@ def process_roles(auth0_roles, dry_run, verbose):
     return (
         failed_roles,
         successful_migrated_roles,
+        roles_exist_descope,
         total_failed_permissions,
         successful_migrated_permissions,
         roles_and_users,
