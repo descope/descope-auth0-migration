@@ -430,11 +430,6 @@ def create_descope_user(user):
                 "freshlyMigrated": True,
             }
             additional_login_ids = login_ids[1 : len(login_ids)]
-            
-             # Auth0 does not put phone number in phone var instead in display name 
-            #  so if sms only user put phone as login id so they can be created
-            if not email and display_name:
-                login_id = display_name
                 
             # Create the user
             resp = descope_client.mgmt.user.create(
@@ -467,7 +462,7 @@ def create_descope_user(user):
                     logging.error(f"Unable to activate user.")
                     logging.error(f"Status Code: {error.status_code}")
                     logging.error(f"Error: {error.error_message}")
-            return True, False, False, ""
+            return True, "", False, ""
         else:
             user_to_update = users[0]
             if user.get("picture"):
@@ -500,8 +495,8 @@ def create_descope_user(user):
                         logging.error(f"Unable to deactivate user.")
                         logging.error(f"Status Code: {error.status_code}")
                         logging.error(f"Error: {error.error_message}")
-                    return None, None, True, user.get("user_id")
-                return None, None, None, ""
+                    return None, "", True, user.get("user_id")
+                return None, "", None, ""
             additional_connections = ",".join(map(str, connections))
             if "connection" in user_to_update["customAttributes"] and additional_connections:
                 custom_attributes["connection"] += "," + additional_connections
@@ -536,14 +531,14 @@ def create_descope_user(user):
                     logging.error(f"Unable to deactivate user.")
                     logging.error(f"Status Code: {error.status_code}")
                     logging.error(f"Error: {error.error_message}")
-                return True, True, True, user.get("user_id")
-            return True, True, False, ""
+                return True, user.get("name"), True, user.get("user_id")
+            return True, user.get("name"), False, ""
     except AuthException as error:
         logging.error(f"Unable to create user. {user}")
         logging.error(f"Error: {error.error_message}")
         return (
             False,
-            False,
+            "",
             False,
             user.get("user_id") + " Reason: " + error.error_message,
         )
@@ -620,7 +615,7 @@ def process_users(api_response_users, dry_run, from_json, verbose):
     """
     failed_users = []
     successful_migrated_users = 0
-    merged_users = 0
+    merged_users = []
     disabled_users_mismatch = []
     
     inital_custom_attributes = {"connection": "String","freshlyMigrated":"Boolean"}
@@ -630,7 +625,7 @@ def process_users(api_response_users, dry_run, from_json, verbose):
         print(f"Would migrate {len(api_response_users)} users from Auth0 to Descope")
         if verbose:
             for user in api_response_users:
-                print(f"\tuser: {user['name']}")
+                print(f"\tUser: {user['name']}")
 
     else:
         if from_json:
@@ -643,7 +638,7 @@ def process_users(api_response_users, dry_run, from_json, verbose):
             )
         for user in api_response_users:
             if verbose:
-                print(f"Starting migration of {user['name']}.")
+                print(f"\tUser: {user['name']}")
 
             success, merged, disabled_mismatch, user_id_error = create_descope_user(
                 user
@@ -651,7 +646,7 @@ def process_users(api_response_users, dry_run, from_json, verbose):
             if success:
                 successful_migrated_users += 1
                 if merged:
-                    merged_users += 1
+                    merged_users.append(merged)
                     if success and disabled_mismatch:
                         disabled_users_mismatch.append(user_id_error)
             elif success == None:
@@ -688,7 +683,7 @@ def process_roles(auth0_roles, dry_run, verbose):
             for role in auth0_roles:
                 permissions = get_permissions_for_role(role["id"])
                 print(
-                    f"\trole: {role['name']} with {len(permissions)} associated permissions."
+                    f"\tRole: {role['name']} with {len(permissions)} associated permissions"
                 )
     else:
         print(f"Starting migration of {len(auth0_roles)} roles found via Auth0 API")
@@ -696,7 +691,7 @@ def process_roles(auth0_roles, dry_run, verbose):
             permissions = get_permissions_for_role(role["id"])
             if verbose:
                 print(
-                    f"Starting migration of {role['name']} with {len(permissions)} associated permissions."
+                    f"\tRole: {role['name']} with {len(permissions)} associated permissions"
                 )
             (
                 success,
@@ -757,7 +752,7 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
             for organization in auth0_organizations:
                 org_members = fetch_auth0_organization_members(organization["id"])
                 print(
-                    f"\torganization: {organization['display_name']} with {len(org_members)} associated users."
+                    f"\tOrganization: {organization['display_name']} with {len(org_members)} associated users"
                 )
     else:
         print(f"Starting migration of {len(auth0_organizations)} organizations found via Auth0 API")
@@ -770,7 +765,7 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
 
             org_members = fetch_auth0_organization_members(organization["id"])
             if verbose:
-                print(f"Starting migration of {organization['id']} with {len(org_members)} associated users.")
+                print(f"\tOrganization: {organization['display_name']} with {len(org_members)} associated users")
             users_added = 0
             for user in org_members:
                 success, error = add_descope_user_to_tenant(

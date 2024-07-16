@@ -74,7 +74,10 @@ def main():
         print("=================== User Migration =============================")
         print(f"Auth0 Users found via API {len(auth0_users)}")
         print(f"Successfully migrated {successful_migrated_users} users")
-        print(f"Successfully merged {merged_users} users")
+        print(f"Successfully merged {len(merged_users)} users")
+        if verbose:
+            for merged_user in merged_users:
+                print(f"Merged user: {merged_user}")
         if len(disabled_users_mismatch) !=0:
             print(f"Users migrated, but disabled due to one of the merged accounts being disabled {len(disabled_users_mismatch)}")
             print(f"Users disabled due to one of the merged accounts being disabled {disabled_users_mismatch}")
@@ -83,7 +86,7 @@ def main():
             print(f"Users which failed to migrate:")
             for failed_user in failed_users:
                 print(failed_user)
-        print(f"Created users within Descope {successful_migrated_users - merged_users}")
+        print(f"Created users within Descope {successful_migrated_users - len(merged_users)}")
 
         print("=================== Role Migration =============================")
         print(f"Auth0 Roles found via API {len(auth0_roles)}")
