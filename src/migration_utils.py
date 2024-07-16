@@ -600,6 +600,14 @@ def add_descope_user_to_tenant(tenant, loginId):
         logging.error(f"Error:, {error.error_message}")
         return False, error.error_message
 
+def check_tenant_exists_descope(tenant_id):
+
+    try:
+        tenant_resp = descope_client.mgmt.tenant.load(tenant_id)
+        return True
+    except:
+        return False
+
 
 ### End Descope Actions:
 
@@ -741,6 +749,7 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
     - auth0_organizations (dict): Dictionary of organizations fetched from Auth0
     """
     successful_tenant_creation = 0
+    tenant_exists_descope = 0
     failed_tenant_creation = []
     failed_users_added_tenants = []
     tenant_users = []
@@ -757,11 +766,16 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
     else:
         print(f"Starting migration of {len(auth0_organizations)} organizations found via Auth0 API")
         for organization in auth0_organizations:
-            success, error = create_descope_tenant(organization)
-            if success:
-                successful_tenant_creation += 1
+            
+            if not check_tenant_exists_descope(organization["id"]):
+                success, error = create_descope_tenant(organization)
+                if success:
+                    successful_tenant_creation += 1
+                else:
+                    failed_tenant_creation.append(error)
             else:
-                failed_tenant_creation.append(error)
+                tenant_exists_descope += 1
+                    
 
             org_members = fetch_auth0_organization_members(organization["id"])
             if verbose:
@@ -784,6 +798,7 @@ def process_auth0_organizations(auth0_organizations, dry_run, verbose):
                 print(f"Still working, migrated {successful_tenant_creation} organizations.")
     return (
         successful_tenant_creation,
+        tenant_exists_descope,
         failed_tenant_creation,
         failed_users_added_tenants,
         tenant_users,

@@ -18,7 +18,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='This is a program to assist you in the migration of your users, roles, permissions, and organizations to Descope.')
     parser.add_argument('--dry-run', action='store_true', help='Enable dry run mode')
-    parser.add_argument('--verbose','-v', action='store_true',help='Enable verbose dry_run')
+    parser.add_argument('--verbose','-v', action='store_true',help='Enable verbose printing for real migration and dry runs')
     parser.add_argument('--with-passwords', nargs=1, metavar='file-path', help='Run the script with passwords from the specified file')
     parser.add_argument('--from-json', nargs=1, metavar='file-path', help='Run the script with users from the specified file rather than API')
     
@@ -58,7 +58,7 @@ def main():
 
     # Fetch, create, and associate users with Organizations
     auth0_organizations = fetch_auth0_organizations()
-    successful_tenant_creation, failed_tenant_creation, failed_users_added_tenants, tenant_users = process_auth0_organizations(auth0_organizations, dry_run, verbose)
+    successful_tenant_creation, tenant_exists_descope, failed_tenant_creation, failed_users_added_tenants, tenant_users = process_auth0_organizations(auth0_organizations, dry_run, verbose)
     if dry_run == False:
         if with_passwords:
             print("=================== Password User Migration ====================")
@@ -119,7 +119,8 @@ def main():
 
         print("=================== Tenant Migration ===========================")
         print(f"Auth0 Tenants found via API {len(auth0_organizations)}")
-        print(f"Successfully migrated {successful_tenant_creation} tenants")
+        print(f"Existing tenants found in Descope {tenant_exists_descope}")
+        print(f"Successfully created {successful_tenant_creation} tenants")
         if len(failed_tenant_creation) !=0:
             print(f"Failed to migrate {len(failed_tenant_creation)}")
             print(f"Tenants which failed to migrate:")
