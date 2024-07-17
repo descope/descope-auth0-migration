@@ -961,7 +961,7 @@ def create_custom_attributes_in_descope(custom_attr_dict):
         }
         custom_attr_post_body.append(custom_attr_body)
 
-    #Combine all custom attribute post request bodies into one
+    # Combine all custom attribute post request bodies into one
     #Request for custom attributes to be created using a post request
     try:
         endpoint = "https://api.descope.com/v1/mgmt/user/customattribute/create"
