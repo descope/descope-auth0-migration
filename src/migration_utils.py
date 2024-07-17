@@ -951,7 +951,7 @@ def create_custom_attributes_in_descope(custom_attr_dict):
     for custom_attr_name, custom_attr_type in custom_attr_dict.items():
         custom_attr_body = {
             "name": custom_attr_name,
-            "type": type_mapping.get(custom_attr_type, 1), # Defualt to 0 if type not found
+            "type": type_mapping.get(custom_attr_type, 1), # Default to 0 if type not found
             "options": [],
             "displayName": custom_attr_name,
             "defaultValue": {},
