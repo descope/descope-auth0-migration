@@ -58,7 +58,7 @@ c. To get your Descope Project ID, go [here](https://app.descope.com/settings/pr
 d. To create a Descope Management Key, go [here](https://app.descope.com/settings/company/managementkeys), then copy
 the token to your `.env` file.
 
-6. The tool depends on a few custom user attributes you need to create within Descope to assist you with the migration. The below outlines the machine names of the attributes to create within the [user's custom attributes](https://app.descope.com/users/attributes) section of the Descope console.
+6. The tool depends on a few custom user attributes that will automatically be created for you. The below outlines the machine names of the attributes created within the [user's custom attributes](https://app.descope.com/users/attributes) section of the Descope console.
 
 - `connection` (type: text): This custom attribute will contain the different connection types associated to the user which was
   migrated from Auth0.
@@ -87,6 +87,8 @@ Live run with passwords: python3 src/main.py --from-json ./path_to_user_export.j
 
 Live run without passwords: python3 src/main.py --from-json ./path_to_user_export.jso
 ```
+
+You can use the `-v` or `--verbose` flags to enable more detailed output. This works for both live and dry runs, providing you with additional information.
 
 ### Dry run
 

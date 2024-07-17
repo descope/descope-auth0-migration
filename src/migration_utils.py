@@ -343,6 +343,7 @@ def create_descope_role_and_permissions(role, permissions):
     """
     permissionNames = []
     success_permissions = 0
+    existing_permissions_descope = []
     failed_permissions = []
     for permission in permissions:
         name = permission["permission_name"]
@@ -352,30 +353,44 @@ def create_descope_role_and_permissions(role, permissions):
             permissionNames.append(name)
             success_permissions += 1
         except AuthException as error:
-            failed_permissions.append(f"{name}, Reason: {error.error_message}")
-            logging.error(f"Unable to create permission: {name}.")
-            logging.error(f"Status Code: {error.status_code}")
-            logging.error(f"Error: {error.error_message}")
+            error_message_dict = json.loads(error.error_message)
+            if  error_message_dict["errorCode"] == "E024104":
+                existing_permissions_descope.append(name)
+                permissionNames.append(name)
+                logging.error(f"Unable to create permission: {name}.")
+                logging.error(f"Status Code: {error.status_code}")
+                logging.error(f"Error: {error.error_message}")
+            else:
+                failed_permissions.append(f"{name}, Reason: {error.error_message}")
+                logging.error(f"Unable to create permission: {name}.")
+                logging.error(f"Status Code: {error.status_code}")
+                logging.error(f"Error: {error.error_message}")
+
 
     role_name = role["name"]
-    role_description = role.get("description", "")
-    try:
-        descope_client.mgmt.role.create(
-            name=role_name,
-            description=role_description,
-            permission_names=permissionNames,
-        )
-        return True, success_permissions, failed_permissions, ""
-    except AuthException as error:
-        logging.error(f"Unable to create role: {role_name}.")
-        logging.error(f"Status Code: {error.status_code}")
-        logging.error(f"Error: {error.error_message}")
-        return (
-            False,
-            success_permissions,
-            failed_permissions,
-            f"{role_name}  Reason: {error.error_message}",
-        )
+    if not check_role_exists_descope(role_name):
+        role_description = role.get("description", "")
+        try:
+            descope_client.mgmt.role.create(
+                name=role_name,
+                description=role_description,
+                permission_names=permissionNames,
+            )
+            return True, False, success_permissions, existing_permissions_descope, failed_permissions, ""
+        except AuthException as error:
+            logging.error(f"Unable to create role: {role_name}.")
+            logging.error(f"Status Code: {error.status_code}")
+            logging.error(f"Error: {error.error_message}")
+            return (
+                False,
+                False,
+                success_permissions,
+                existing_permissions_descope,
+                failed_permissions,
+                f"{role_name}  Reason: {error.error_message}",
+            )
+    else:
+        return False, True, success_permissions, existing_permissions_descope, failed_permissions, ""
 
 
 def create_descope_user(user):
@@ -430,7 +445,7 @@ def create_descope_user(user):
                 "freshlyMigrated": True,
             }
             additional_login_ids = login_ids[1 : len(login_ids)]
-
+                
             # Create the user
             resp = descope_client.mgmt.user.create(
                 login_id=login_id,
@@ -462,7 +477,7 @@ def create_descope_user(user):
                     logging.error(f"Unable to activate user.")
                     logging.error(f"Status Code: {error.status_code}")
                     logging.error(f"Error: {error.error_message}")
-            return True, False, False, ""
+            return True, "", False, ""
         else:
             user_to_update = users[0]
             if user.get("picture"):
@@ -495,8 +510,8 @@ def create_descope_user(user):
                         logging.error(f"Unable to deactivate user.")
                         logging.error(f"Status Code: {error.status_code}")
                         logging.error(f"Error: {error.error_message}")
-                    return None, None, True, user.get("user_id")
-                return None, None, None, ""
+                    return None, "", True, user.get("user_id")
+                return None, "", None, ""
             additional_connections = ",".join(map(str, connections))
             if "connection" in user_to_update["customAttributes"] and additional_connections:
                 custom_attributes["connection"] += "," + additional_connections
@@ -531,14 +546,14 @@ def create_descope_user(user):
                     logging.error(f"Unable to deactivate user.")
                     logging.error(f"Status Code: {error.status_code}")
                     logging.error(f"Error: {error.error_message}")
-                return True, True, True, user.get("user_id")
-            return True, True, False, ""
+                return True, user.get("name"), True, user.get("user_id")
+            return True, user.get("name"), False, ""
     except AuthException as error:
         logging.error(f"Unable to create user. {user}")
         logging.error(f"Error: {error.error_message}")
         return (
             False,
-            False,
+            "",
             False,
             user.get("user_id") + " Reason: " + error.error_message,
         )
@@ -600,13 +615,32 @@ def add_descope_user_to_tenant(tenant, loginId):
         logging.error(f"Error:, {error.error_message}")
         return False, error.error_message
 
+def check_tenant_exists_descope(tenant_id):
+
+    try:
+        tenant_resp = descope_client.mgmt.tenant.load(tenant_id)
+        return True
+    except:
+        return False
+
+def check_role_exists_descope(role_name):
+
+    try:
+        roles_resp = descope_client.mgmt.role.search(role_names=[role_name])
+        if roles_resp["roles"]:
+            return True
+        else:
+            return False
+    except:
+        return False
+
 
 ### End Descope Actions:
 
 ### Begin Process Functions
 
 
-def process_users(api_response_users, dry_run, from_json):
+def process_users(api_response_users, dry_run, from_json, verbose):
     """
     Process the list of users from Auth0 by mapping and creating them in Descope.
 
@@ -615,10 +649,18 @@ def process_users(api_response_users, dry_run, from_json):
     """
     failed_users = []
     successful_migrated_users = 0
-    merged_users = 0
+    merged_users = []
     disabled_users_mismatch = []
+    
+    inital_custom_attributes = {"connection": "String","freshlyMigrated":"Boolean"}
+    create_custom_attributes_in_descope(inital_custom_attributes)
+
     if dry_run:
         print(f"Would migrate {len(api_response_users)} users from Auth0 to Descope")
+        if verbose:
+            for user in api_response_users:
+                print(f"\tUser: {user['name']}")
+
     else:
         if from_json:
             print(
@@ -629,13 +671,16 @@ def process_users(api_response_users, dry_run, from_json):
             f"Starting migration of {len(api_response_users)} users found via Auth0 API"
             )
         for user in api_response_users:
+            if verbose:
+                print(f"\tUser: {user['name']}")
+
             success, merged, disabled_mismatch, user_id_error = create_descope_user(
                 user
             )
             if success:
                 successful_migrated_users += 1
                 if merged:
-                    merged_users += 1
+                    merged_users.append(merged)
                     if success and disabled_mismatch:
                         disabled_users_mismatch.append(user_id_error)
             elif success == None:
@@ -643,7 +688,7 @@ def process_users(api_response_users, dry_run, from_json):
                     disabled_users_mismatch.append(user_id_error)
             else:
                 failed_users.append(user_id_error)
-            if successful_migrated_users % 10 == 0 and successful_migrated_users > 0:
+            if successful_migrated_users % 10 == 0 and successful_migrated_users > 0 and not verbose:
                 print(f"Still working, migrated {successful_migrated_users} users.")
     return (
         failed_users,
@@ -653,7 +698,7 @@ def process_users(api_response_users, dry_run, from_json):
     )
 
 
-def process_roles(auth0_roles, dry_run):
+def process_roles(auth0_roles, dry_run, verbose):
     """
     Process the Auth0 organizations - creating roles, permissions, and associating users
 
@@ -662,32 +707,41 @@ def process_roles(auth0_roles, dry_run):
     """
     failed_roles = []
     successful_migrated_roles = 0
+    roles_exist_descope = 0
+    total_existing_permissions_descope = []
     total_failed_permissions = []
     successful_migrated_permissions = 0
     roles_and_users = []
     failed_roles_and_users = []
     if dry_run:
         print(f"Would migrate {len(auth0_roles)} roles from Auth0 to Descope")
-        for role in auth0_roles:
-            permissions = get_permissions_for_role(role["id"])
-            print(
-                f"Would migrate {role['name']} with {len(permissions)} associated permissions."
-            )
+        if verbose:
+            for role in auth0_roles:
+                permissions = get_permissions_for_role(role["id"])
+                print(
+                    f"\tRole: {role['name']} with {len(permissions)} associated permissions"
+                )
     else:
         print(f"Starting migration of {len(auth0_roles)} roles found via Auth0 API")
         for role in auth0_roles:
             permissions = get_permissions_for_role(role["id"])
-            print(
-                f"Starting migration of {role['name']} with {len(permissions)} associated permissions."
-            )
+            if verbose:
+                print(
+                    f"\tRole: {role['name']} with {len(permissions)} associated permissions"
+                )
             (
                 success,
+                role_exists,
                 success_permissions,
+                existing_permissions_descope,
                 failed_permissions,
                 error,
             ) = create_descope_role_and_permissions(role, permissions)
             if success:
                 successful_migrated_roles += 1
+                successful_migrated_permissions += success_permissions
+            elif role_exists:
+                roles_exist_descope += 1
                 successful_migrated_permissions += success_permissions
             else:
                 failed_roles.append(error)
@@ -695,6 +749,10 @@ def process_roles(auth0_roles, dry_run):
             if len(failed_permissions) != 0:
                 for item in failed_permissions:
                     total_failed_permissions.append(item)
+            if len(existing_permissions_descope) != 0:
+                for item in existing_permissions_descope:
+                    if item not in total_existing_permissions_descope:
+                        total_existing_permissions_descope.append(item)
             users = get_users_in_role(role["id"])
 
             users_added = 0
@@ -707,18 +765,22 @@ def process_roles(auth0_roles, dry_run):
                         f"{user['user_id']} failed to be added to {role['name']} Reason: {error}"
                     )
             roles_and_users.append(f"Mapped {users_added} user to {role['name']}")
+            if successful_migrated_roles % 10 == 0 and successful_migrated_roles > 0 and not verbose:
+                print(f"Still working, migrated {successful_migrated_roles} roles.")
 
     return (
         failed_roles,
         successful_migrated_roles,
+        roles_exist_descope,
         total_failed_permissions,
         successful_migrated_permissions,
+        total_existing_permissions_descope,
         roles_and_users,
         failed_roles_and_users,
     )
 
 
-def process_auth0_organizations(auth0_organizations, dry_run):
+def process_auth0_organizations(auth0_organizations, dry_run, verbose):
     """
     Process the Auth0 organizations - creating tenants and associating users
 
@@ -726,6 +788,7 @@ def process_auth0_organizations(auth0_organizations, dry_run):
     - auth0_organizations (dict): Dictionary of organizations fetched from Auth0
     """
     successful_tenant_creation = 0
+    tenant_exists_descope = 0
     failed_tenant_creation = []
     failed_users_added_tenants = []
     tenant_users = []
@@ -733,20 +796,29 @@ def process_auth0_organizations(auth0_organizations, dry_run):
         print(
             f"Would migrate {len(auth0_organizations)} organizations from Auth0 to Descope"
         )
-        for organization in auth0_organizations:
-            org_members = fetch_auth0_organization_members(organization["id"])
-            print(
-                f"Would migrate {organization['display_name']} with {len(org_members)} associated users."
-            )
+        if verbose:
+            for organization in auth0_organizations:
+                org_members = fetch_auth0_organization_members(organization["id"])
+                print(
+                    f"\tOrganization: {organization['display_name']} with {len(org_members)} associated users"
+                )
     else:
+        print(f"Starting migration of {len(auth0_organizations)} organizations found via Auth0 API")
         for organization in auth0_organizations:
-            success, error = create_descope_tenant(organization)
-            if success:
-                successful_tenant_creation += 1
+            
+            if not check_tenant_exists_descope(organization["id"]):
+                success, error = create_descope_tenant(organization)
+                if success:
+                    successful_tenant_creation += 1
+                else:
+                    failed_tenant_creation.append(error)
             else:
-                failed_tenant_creation.append(error)
+                tenant_exists_descope += 1
+                    
 
             org_members = fetch_auth0_organization_members(organization["id"])
+            if verbose:
+                print(f"\tOrganization: {organization['display_name']} with {len(org_members)} associated users")
             users_added = 0
             for user in org_members:
                 success, error = add_descope_user_to_tenant(
@@ -756,13 +828,16 @@ def process_auth0_organizations(auth0_organizations, dry_run):
                     users_added += 1
                 else:
                     failed_users_added_tenants.append(
-                        f"User {loginId} failed to be added to tenant {organization['display_name']} Reason: {error}"
+                        f"User {user['email']} failed to be added to tenant {organization['display_name']} Reason: {error}"
                     )
             tenant_users.append(
                 f"Associated {users_added} users with tenant: {organization['display_name']} "
             )
+            if successful_tenant_creation % 10 == 0 and successful_tenant_creation > 0 and not verbose:
+                print(f"Still working, migrated {successful_tenant_creation} organizations.")
     return (
         successful_tenant_creation,
+        tenant_exists_descope,
         failed_tenant_creation,
         failed_users_added_tenants,
         tenant_users,
@@ -787,7 +862,7 @@ def read_auth0_export(file_path):
         data = [json.loads(line) for line in file]
     return data
 
-def process_users_with_passwords(file_path, dry_run):
+def process_users_with_passwords(file_path, dry_run, verbose):
     users = read_auth0_export(file_path)
     successful_password_users = 0
     failed_password_users = []
@@ -796,6 +871,9 @@ def process_users_with_passwords(file_path, dry_run):
         print(
             f"Would migrate {len(users)} users from Auth0 with Passwords to Descope"
         )
+        if verbose:
+            for user in users:
+                print(f"\tuser: {user['name']}")
 
     else:
         print(
@@ -853,6 +931,64 @@ def create_users_with_passwords(user_object):
         logging.error("Unable to create user with password.")
         logging.error(f"Error:, {error.error_message}")
         return False
+    
+def create_custom_attributes_in_descope(custom_attr_dict):
+    """
+    Creates custom attributes in Descope
+
+    Args:
+    - custom_attr_dict: Dictionary of custom attribute names and assosciated data types {"name" : dataType, ...} 
+    """
+
+    type_mapping = {
+        'String': 1,
+        'Number': 2,
+        'Boolean': 3
+    }
+  
+    # Takes indivdual custom attribute and makes a json body for create attribute post request
+    custom_attr_post_body = []
+    for custom_attr_name, custom_attr_type in custom_attr_dict.items():
+        custom_attr_body = {
+            "name": custom_attr_name,
+            "type": type_mapping.get(custom_attr_type, 1), # Default to 0 if type not found
+            "options": [],
+            "displayName": custom_attr_name,
+            "defaultValue": {},
+            "viewPermissions": [],
+            "editPermissions": [],
+            "editable": True
+        }
+        custom_attr_post_body.append(custom_attr_body)
+
+    # Combine all custom attribute post request bodies into one
+    # Request for custom attributes to be created using a post request
+    try:
+        endpoint = "https://api.descope.com/v1/mgmt/user/customattribute/create"
+        data = {"attributes":custom_attr_post_body}
+        headers = {
+            "Authorization": f"Bearer {DESCOPE_PROJECT_ID}:{DESCOPE_MANAGEMENT_KEY}",
+            "Content-Type": "application/json"
+            }
+        response = api_request_with_retry(
+            action="post",
+            url=endpoint,
+            headers=headers,
+            data=json.dumps(data)
+            )
+        
+        if response.ok:
+            logging.info(f"Custom attributes successfully created in Descope")
+        else: 
+            response.raise_for_status()
+
+    except requests.HTTPError as e:
+        error_dict = {
+            "status_code":e.response.status_code,
+            "error_reason":e.response.reason,
+            "error_message":e.response.text
+            }
+        logging.error(f"Failed to create custom Attributes: {str(error_dict)}")
 
 # def fetch_auth0_password_user(email):
 #     """
