@@ -343,6 +343,7 @@ def create_descope_role_and_permissions(role, permissions):
     """
     permissionNames = []
     success_permissions = 0
+    existing_permissions_descope = []
     failed_permissions = []
     for permission in permissions:
         name = permission["permission_name"]
@@ -352,10 +353,18 @@ def create_descope_role_and_permissions(role, permissions):
             permissionNames.append(name)
             success_permissions += 1
         except AuthException as error:
-            failed_permissions.append(f"{name}, Reason: {error.error_message}")
-            logging.error(f"Unable to create permission: {name}.")
-            logging.error(f"Status Code: {error.status_code}")
-            logging.error(f"Error: {error.error_message}")
+            error_message_dict = json.loads(error.error_message)
+            if  error_message_dict["errorCode"] == "E024104":
+                existing_permissions_descope.append(name)
+                permissionNames.append(name)
+                logging.error(f"Unable to create permission: {name}.")
+                logging.error(f"Status Code: {error.status_code}")
+                logging.error(f"Error: {error.error_message}")
+            else:
+                failed_permissions.append(f"{name}, Reason: {error.error_message}")
+                logging.error(f"Unable to create permission: {name}.")
+                logging.error(f"Status Code: {error.status_code}")
+                logging.error(f"Error: {error.error_message}")
 
 
     role_name = role["name"]
@@ -367,7 +376,7 @@ def create_descope_role_and_permissions(role, permissions):
                 description=role_description,
                 permission_names=permissionNames,
             )
-            return True, False, success_permissions, failed_permissions, ""
+            return True, False, success_permissions, existing_permissions_descope, failed_permissions, ""
         except AuthException as error:
             logging.error(f"Unable to create role: {role_name}.")
             logging.error(f"Status Code: {error.status_code}")
@@ -376,11 +385,12 @@ def create_descope_role_and_permissions(role, permissions):
                 False,
                 False,
                 success_permissions,
+                existing_permissions_descope,
                 failed_permissions,
                 f"{role_name}  Reason: {error.error_message}",
             )
     else:
-        return False, True, success_permissions, failed_permissions, ""
+        return False, True, success_permissions, existing_permissions_descope, failed_permissions, ""
 
 
 def create_descope_user(user):
@@ -698,6 +708,7 @@ def process_roles(auth0_roles, dry_run, verbose):
     failed_roles = []
     successful_migrated_roles = 0
     roles_exist_descope = 0
+    total_existing_permissions_descope = []
     total_failed_permissions = []
     successful_migrated_permissions = 0
     roles_and_users = []
@@ -722,6 +733,7 @@ def process_roles(auth0_roles, dry_run, verbose):
                 success,
                 role_exists,
                 success_permissions,
+                existing_permissions_descope,
                 failed_permissions,
                 error,
             ) = create_descope_role_and_permissions(role, permissions)
@@ -737,6 +749,10 @@ def process_roles(auth0_roles, dry_run, verbose):
             if len(failed_permissions) != 0:
                 for item in failed_permissions:
                     total_failed_permissions.append(item)
+            if len(existing_permissions_descope) != 0:
+                for item in existing_permissions_descope:
+                    if item not in total_existing_permissions_descope:
+                        total_existing_permissions_descope.append(item)
             users = get_users_in_role(role["id"])
 
             users_added = 0
@@ -758,6 +774,7 @@ def process_roles(auth0_roles, dry_run, verbose):
         roles_exist_descope,
         total_failed_permissions,
         successful_migrated_permissions,
+        total_existing_permissions_descope,
         roles_and_users,
         failed_roles_and_users,
     )

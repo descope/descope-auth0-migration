@@ -54,7 +54,7 @@ def main():
 
     # Fetch, create, and associate users with roles and permissions
     auth0_roles = fetch_auth0_roles()
-    failed_roles, successful_migrated_roles, roles_exist_descope, failed_permissions, successful_migrated_permissions, roles_and_users, failed_roles_and_users = process_roles(auth0_roles, dry_run, verbose)
+    failed_roles, successful_migrated_roles, roles_exist_descope, failed_permissions, successful_migrated_permissions, total_existing_permissions_descope, roles_and_users, failed_roles_and_users = process_roles(auth0_roles, dry_run, verbose)
 
     # Fetch, create, and associate users with Organizations
     auth0_organizations = fetch_auth0_organizations()
@@ -99,14 +99,14 @@ def main():
                 print(failed_role)
 
         print("=================== Permission Migration =======================")
-        print(f"Auth0 Permissions found via API {len(failed_permissions)+successful_migrated_permissions}")
-        print(f"Successfully migrated {successful_migrated_permissions} permissions")
+        print(f"Auth0 Permissions found via API {len(failed_permissions) + successful_migrated_permissions + len(total_existing_permissions_descope)}")
+        print(f"Existing permissions found in Descope {len(total_existing_permissions_descope)}")
+        print(f"Created permissions within Descope {successful_migrated_permissions}")
         if len(failed_permissions) !=0:
             print(f"Failed to migrate {len(failed_permissions)}")
             print(f"Permissions which failed to migrate:")
             for failed_permission in failed_permissions:
                 print(failed_permission)
-        print(f"Created permissions within Descope {successful_migrated_permissions}")
 
         print("=================== User/Role Mapping ==========================")
         print(f"Successfully role and user mapping")
