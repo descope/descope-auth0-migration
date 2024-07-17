@@ -18,7 +18,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='This is a program to assist you in the migration of your users, roles, permissions, and organizations to Descope.')
     parser.add_argument('--dry-run', action='store_true', help='Enable dry run mode')
-    parser.add_argument('--verbose','-v', action='store_true',help='Enable verbose printing for real migration and dry runs')
+    parser.add_argument('--verbose','-v', action='store_true',help='Enable verbose printing for live runs and dry runs')
     parser.add_argument('--with-passwords', nargs=1, metavar='file-path', help='Run the script with passwords from the specified file')
     parser.add_argument('--from-json', nargs=1, metavar='file-path', help='Run the script with users from the specified file rather than API')
     

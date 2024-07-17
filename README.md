@@ -88,6 +88,8 @@ Live run with passwords: python3 src/main.py --from-json ./path_to_user_export.j
 Live run without passwords: python3 src/main.py --from-json ./path_to_user_export.jso
 ```
 
+You can use the `-v` or `--verbose` flags to enable more detailed output. This works for both live and dry runs, providing you with additional information.
+
 ### Dry run
 
 You can dry run the migration script which will allow you to see the number of users, tenants, roles, etc which will be migrated
