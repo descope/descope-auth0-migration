@@ -550,7 +550,6 @@ def create_descope_user(user):
             return True, user.get("name"), False, ""
     except AuthException as error:
         logging.error(f"Unable to create user {user.get('user_id', 'unknown')}. Error: {error.error_message}")
-        logging.error(f"Error: {error.error_message}")
         return (
             False,
             "",
