@@ -549,7 +549,7 @@ def create_descope_user(user):
                 return True, user.get("name"), True, user.get("user_id")
             return True, user.get("name"), False, ""
     except AuthException as error:
-        logging.error(f"Unable to create user. {user}")
+        logging.error(f"Unable to create user {user.get('user_id', 'unknown')}. Error: {error.error_message}")
         logging.error(f"Error: {error.error_message}")
         return (
             False,
@@ -907,7 +907,7 @@ def build_user_object_with_passwords(extracted_user):
         UserObj(
             login_id=extracted_user['email'],
             email=extracted_user['email'],
-            verified_email=True,#extracted_user['email_verified'],
+            verified_email=extracted_user.get('email_verified', False),
             password=userPasswordToCreate,
             custom_attributes = {
                 "connection": "Username-Password-Authentication",
